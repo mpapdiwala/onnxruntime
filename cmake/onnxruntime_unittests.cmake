@@ -455,6 +455,10 @@ if(onnxruntime_USE_COREML)
   endif()
 endif()
 
+if(onnxruntime_USE_XNNPACK)
+  list(APPEND onnxruntime_test_providers_dependencies onnxruntime_providers_xnnpack)
+endif()
+
 file(GLOB_RECURSE onnxruntime_test_tvm_src CONFIGURE_DEPENDS
   "${TEST_SRC_DIR}/tvm/*.h"
   "${TEST_SRC_DIR}/tvm/*.cc"
@@ -555,7 +559,11 @@ if (onnxruntime_USE_STVM)
 
   list(APPEND onnxruntime_test_providers_dependencies onnxruntime_providers_stvm)
 endif()
-
+if(onnxruntime_USE_XNNPACK)
+  list(APPEND onnxruntime_test_framework_libs onnxruntime_providers_xnnpack)
+  list(APPEND onnxruntime_test_providers_dependencies onnxruntime_providers_xnnpack)
+  list(APPEND onnxruntime_test_providers_libs onnxruntime_providers_xnnpack)
+endif()
 if(WIN32)
   if (onnxruntime_USE_TVM)
     list(APPEND disabled_warnings ${DISABLED_WARNINGS_FOR_TVM})
@@ -1019,6 +1027,10 @@ if (NOT onnxruntime_ENABLE_TRAINING_TORCH_INTEROP)
   endif()
   set_target_properties(onnxruntime_perf_test PROPERTIES FOLDER "ONNXRuntimeTest")
 
+  if (onnxruntime_USE_XNNPACK)
+    target_link_libraries(onnxruntime_perf_test PRIVATE onnxruntime_providers_xnnpack)
+  endif()
+
   if (onnxruntime_ENABLE_LANGUAGE_INTEROP_OPS AND NOT onnxruntime_BUILD_SHARED_LIB)
     target_link_libraries(onnxruntime_perf_test PRIVATE onnxruntime_language_interop onnxruntime_pyop)
   endif()
@@ -1264,3 +1276,24 @@ if (onnxruntime_USE_STVM)
 endif()
 
 include(onnxruntime_fuzz_test.cmake)
+
+if(onnxruntime_USE_XNNPACK)
+    onnxruntime_add_executable(onnxruntime_xnnpack_test   "${TEST_SRC_DIR}/xnnpack/main.cpp")
+    if(${CMAKE_SYSTEM_NAME} STREQUAL "iOS")
+      set_target_properties(onnxruntime_xnnpack_test PROPERTIES
+        XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
+    )
+    endif()
+    target_include_directories(onnxruntime_xnnpack_test PRIVATE ${ONNXRUNTIME_ROOT}
+            ${CMAKE_CURRENT_BINARY_DIR})
+    target_link_libraries(onnxruntime_xnnpack_test PRIVATE  onnxruntime_session
+  onnxruntime_optimizer
+  onnxruntime_providers
+  onnxruntime_util
+  onnxruntime_framework
+  onnxruntime_graph
+  ${ONNXRUNTIME_MLAS_LIBS}
+  onnxruntime_common
+  onnxruntime_flatbuffers ${onnxruntime_EXTERNAL_LIBRARIES})
+    set_target_properties(onnxruntime_xnnpack_test PROPERTIES FOLDER "ONNXRuntimeTest")
+endif()
