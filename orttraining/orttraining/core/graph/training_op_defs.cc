@@ -1282,6 +1282,26 @@ Example 4:
         propagateShapeAndTypeFromFirstInput(ctx);
       });
 
+  ONNX_CONTRIB_OPERATOR_SCHEMA(NcclBroadcast)
+      .SetDomain(kMSDomain)
+      .SinceVersion(1)
+      .Attr("group_type",
+            "0 - global parallel group, 1 - data parallel group, "
+            "2 - node local data parallel group, 3 - cross node data parallel group, "
+            "4 - horozontal parallel, 5 - model parallel.",
+            AttributeProto::INT,
+            static_cast<int64_t>(0))
+      .Input(0, "input", "tensors to be broadcasted", "T", OpSchema::Variadic)
+      .Output(0, "output", "broadcasted tensors", "T", OpSchema::Variadic)
+      .TypeConstraint(
+          "T",
+          {"tensor(bfloat16)"},
+          "Constrain to bfloat16 tensors.")
+      .TypeAndShapeInferenceFunction([](ONNX_NAMESPACE::InferenceContext& ctx) {
+        assert(getAttribute(ctx, "group_type", 0) < static_cast<int64_t>(WorkerGroupType::WorkerGroupTypeCount));
+        propagateShapeAndTypeFromFirstInput(ctx);
+      });
+
   ONNX_CONTRIB_OPERATOR_SCHEMA(NcclAllGather)
       .SetDomain(kMSDomain)
       .SinceVersion(1)
